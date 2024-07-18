@@ -1,0 +1,18 @@
+--- 
+phases: 
+  build: 
+    commands: 
+      - "echo Build started on `date`"
+      - "echo Building the Docker image..."
+      - "docker build -t varuntej18/-python-server ."
+      - "docker tag varuntej18/python-server varuntej18/python-server:latest"
+  post_build: 
+    commands: 
+      - "echo Build completed on `date`"
+      - "echo Pushing the Docker image..."
+      - "docker push varuntej18/python-server:latest"
+  pre_build: 
+    commands: 
+      - "echo Logging in to Docker Hub..."
+      - "docker login --username=\"varuntej18" --password=\"varuntej@18""
+version: 0.1
