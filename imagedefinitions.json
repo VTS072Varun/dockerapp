@@ -1,0 +1,6 @@
+[
+    {
+        "name": "python-server",
+        "imageUri": "varuntej18/python-server:latest"
+    }
+]
