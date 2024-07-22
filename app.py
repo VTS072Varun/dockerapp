@@ -1,19 +1,16 @@
-
 import os
-import fitz  # PyMuPDF
 import openai
 import re
 import logging
 import json
+import mammoth  
 from flask import Flask, request, jsonify
-from langchain_community.chat_models import ChatOpenAI
+import fitz  
+import docx  
 from dotenv import load_dotenv
-import docx  # python-docx
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Set your OpenAI API key from the environment variable
 openai_api_key = os.getenv('OPENAI_API_KEY')
 openai.api_key = openai_api_key
 
@@ -26,7 +23,7 @@ class ResumeParser():
         if not os.path.exists(logs_dir):
             os.makedirs(logs_dir)
 
-        # GPT-3 completion questions
+        # GPT-4 completion questions
         self.prompt_questions = """
             Summarize the text below into a JSON with exactly the following structure {
                 basic_info: {
@@ -42,12 +39,8 @@ class ResumeParser():
             }
         """
         
-        # Set up this parser's logger
         logging.basicConfig(filename='logs/parser.log', level=logging.DEBUG)
         self.logger = logging.getLogger()
-
-        # Initialize ChatOpenAI model with gpt-4
-        self.llm = ChatOpenAI(model="gpt-4", temperature=0.0, openai_api_key=openai_api_key)
 
     def pdf2string(self, pdf_path):
         """
@@ -62,7 +55,7 @@ class ResumeParser():
             pdf_text += page.get_text()
         doc.close()
 
-        # Perform additional text preprocessing as needed
+        
         pdf_text = re.sub('\s[,.]', ',', pdf_text)
         pdf_text = re.sub('[\n]+', '\n', pdf_text)
         pdf_text = re.sub('[\s]+', ' ', pdf_text)
@@ -79,7 +72,25 @@ class ResumeParser():
         doc = docx.Document(docx_path)
         doc_text = '\n'.join([para.text for para in doc.paragraphs])
 
-        # Perform additional text preprocessing as needed
+        
+        doc_text = re.sub('\s[,.]', ',', doc_text)
+        doc_text = re.sub('[\n]+', '\n', doc_text)
+        doc_text = re.sub('[\s]+', ' ', doc_text)
+        doc_text = re.sub('http[s]?(://)?', '', doc_text)
+
+        return doc_text
+
+    def doc2string(self, doc_path):
+        """
+        Extract the content of a .doc file using mammoth.
+        :param doc_path: Path to the DOC file.
+        :return: DOC content string.
+        """
+        with open(doc_path, "rb") as doc_file:
+            result = mammoth.extract_raw_text(doc_file)
+            doc_text = result.value
+
+        
         doc_text = re.sub('\s[,.]', ',', doc_text)
         doc_text = re.sub('[\n]+', '\n', doc_text)
         doc_text = re.sub('[\s]+', ' ', doc_text)
@@ -93,10 +104,10 @@ class ResumeParser():
         :param prompt: Prompt for the model.
         :return: Response from the model.
         """
-        self.logger.info('query_completion: using gpt-4')
+        self.logger.info('query_completion: using gpt-4o')
 
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}]
         )
         return response['choices'][0]['message']['content']
@@ -105,14 +116,16 @@ class ResumeParser():
         """
         Query OpenAI model for the work experience and/or basic information from the resume at the file path.
         :param file_path: Path to the file.
-        :param file_type: Type of the file (pdf or docx).
-        :return dictionary of resume with keys (basic_info, work_experience, Eduaction, skills).
+        :param file_type: Type of the file (pdf, docx, or doc).
+        :return dictionary of resume with keys (basic_info, work_experience, Education, skills).
         """
         resume = {}
         if file_type == 'pdf':
             file_str = self.pdf2string(file_path)
         elif file_type == 'docx':
             file_str = self.docx2string(file_path)
+        elif file_type == 'doc':
+            file_str = self.doc2string(file_path)
         else:
             raise ValueError("Unsupported file type")
 
@@ -133,7 +146,7 @@ def parse_resume():
         file.save(file_path)
 
         file_extension = file.filename.split('.')[-1].lower()
-        if file_extension not in ['pdf', 'docx']:
+        if file_extension not in ['pdf', 'docx', 'doc']:
             return jsonify({"error": "Unsupported file type"}), 400
 
         parser = ResumeParser()
@@ -144,4 +157,4 @@ def parse_resume():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, port=3000, host='0.0.0.0')
+    app.run(port=3000,host="0.0.0.0",debug=True)
