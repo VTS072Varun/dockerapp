@@ -1,6 +1,6 @@
 [
     {
-        "name": "python-server",
-        "imageUri": "varuntej18/python-server:latest"
+        "name": "awscli-demo-private",
+        "imageUri": "146225787475.dkr.ecr.us-east-1.amazonaws.com/awscli-demo-private:latest"
     }
 ]
