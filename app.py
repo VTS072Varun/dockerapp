@@ -45,5 +45,14 @@ def search_candidates():
     summary, top_candidates = process_job_request(job_request)
     return jsonify({'top_candidates': top_candidates})
 
+# Health check route
+@app.route('/health', methods=['GET'])
+def health_check():
+    version = "1.0"  # Replace with your actual version
+    hostname = os.getenv('HOSTNAME', 'localhost')
+    port = os.getenv('PORT', '5000')
+    print(f'[Version {version}]: New request => http://{hostname}:{port}/health')
+    return jsonify({"status": "ok"}), 200
+
 if __name__ == '__main__':
     app.run(port=5000, host='0.0.0.0', debug=True)
