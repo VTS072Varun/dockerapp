@@ -69,3 +69,8 @@ def analyze_fitment(candidate_info, job_description):
 
 if __name__ == '__main__':
     app.run(debug=True)
+        "matching_score": matching_score
+    }
+
+if __name__ == '__main__':
+    app.run(debug=True)
