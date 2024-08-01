@@ -1,145 +1,15 @@
-import os
-import openai
-import re
-import logging
-import json
-import mammoth  
 from flask import Flask, request, jsonify
-import fitz  
-import docx  
-from dotenv import load_dotenv
-
-load_dotenv()
-
-openai_api_key = os.getenv('OPENAI_API_KEY')
-openai.api_key = openai_api_key
+import os
+from Resume_Parser import ResumeParser
+from fitment_analysis import analyze_fitment
+from Resume_Search import process_job_request
 
 app = Flask(__name__)
-
-class ResumeParser():
-    def __init__(self):
-        # Ensure logs directory exists for logging
-        logs_dir = 'logs'
-        if not os.path.exists(logs_dir):
-            os.makedirs(logs_dir)
-
-        # GPT-4 completion questions
-        self.prompt_questions = """
-            Summarize the text below into a JSON with exactly the following structure {
-                basic_info: {
-                    full_name, email, phone_number, City, Country, Province, linkedin_url, Experience_level, technical_expertise_in_skills , Experience_in_Years, Job_Title
-                },
-                work_experience: [{
-                    job_title, company, location,
-                }],
-                Education: [{
-                    Institution_Name, Start_year-End_Year, Degree, Percentage
-                }],
-                skills: [skill_name]
-            }
-        """
-        
-        logging.basicConfig(filename='logs/parser.log', level=logging.DEBUG)
-        self.logger = logging.getLogger()
-
-    def pdf2string(self, pdf_path):
-        """
-        Extract the content of a pdf file to string using PyMuPDF.
-        :param pdf_path: Path to the PDF file.
-        :return: PDF content string.
-        """
-        pdf_text = ""
-        doc = fitz.open(pdf_path)
-        for page_num in range(len(doc)):
-            page = doc.load_page(page_num)
-            pdf_text += page.get_text()
-        doc.close()
-
-        
-        pdf_text = re.sub('\s[,.]', ',', pdf_text)
-        pdf_text = re.sub('[\n]+', '\n', pdf_text)
-        pdf_text = re.sub('[\s]+', ' ', pdf_text)
-        pdf_text = re.sub('http[s]?(://)?', '', pdf_text)
-
-        return pdf_text
-
-    def docx2string(self, docx_path):
-        """
-        Extract the content of a docx file to string using python-docx.
-        :param docx_path: Path to the DOCX file.
-        :return: DOCX content string.
-        """
-        doc = docx.Document(docx_path)
-        doc_text = '\n'.join([para.text for para in doc.paragraphs])
-
-        
-        doc_text = re.sub('\s[,.]', ',', doc_text)
-        doc_text = re.sub('[\n]+', '\n', doc_text)
-        doc_text = re.sub('[\s]+', ' ', doc_text)
-        doc_text = re.sub('http[s]?(://)?', '', doc_text)
-
-        return doc_text
-
-    def doc2string(self, doc_path):
-        """
-        Extract the content of a .doc file using mammoth.
-        :param doc_path: Path to the DOC file.
-        :return: DOC content string.
-        """
-        with open(doc_path, "rb") as doc_file:
-            result = mammoth.extract_raw_text(doc_file)
-            doc_text = result.value
-
-        
-        doc_text = re.sub('\s[,.]', ',', doc_text)
-        doc_text = re.sub('[\n]+', '\n', doc_text)
-        doc_text = re.sub('[\s]+', ' ', doc_text)
-        doc_text = re.sub('http[s]?(://)?', '', doc_text)
-
-        return doc_text
-
-    def query_completion(self, prompt):
-        """
-        Base function for querying OpenAI model.
-        :param prompt: Prompt for the model.
-        :return: Response from the model.
-        """
-        self.logger.info('query_completion: using gpt-4o')
-
-        response = openai.ChatCompletion.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response['choices'][0]['message']['content']
-
-    def query_resume(self, file_path, file_type):
-        """
-        Query OpenAI model for the work experience and/or basic information from the resume at the file path.
-        :param file_path: Path to the file.
-        :param file_type: Type of the file (pdf, docx, or doc).
-        :return dictionary of resume with keys (basic_info, work_experience, Education, skills).
-        """
-        resume = {}
-        if file_type == 'pdf':
-            file_str = self.pdf2string(file_path)
-        elif file_type == 'docx':
-            file_str = self.docx2string(file_path)
-        elif file_type == 'doc':
-            file_str = self.doc2string(file_path)
-        else:
-            raise ValueError("Unsupported file type")
-
-        prompt = self.prompt_questions + '\n' + file_str
-
-        response_text = self.query_completion(prompt)
-        resume = json.loads(response_text)
-        return resume
 
 @app.route('/parse_resume', methods=['POST'])
 def parse_resume():
     try:
         file = request.files['file']
-        # Create uploads directory if it does not exist
         if not os.path.exists('uploads'):
             os.makedirs('uploads')
         file_path = f"uploads/{file.filename}"
@@ -156,5 +26,24 @@ def parse_resume():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(port=3000,host="0.0.0.0",debug=True)
+@app.route('/fitment_analysis', methods=['POST'])
+def fitment_analysis():
+    data = request.get_json()
+    job_description = data.get('job_description')
+    candidate_info = data.get('candidate_info')
+    
+    if not job_description or not candidate_info:
+        return jsonify({"error": "Job description and candidate information are required"}), 400
+    
+    fitment_result = analyze_fitment(candidate_info, job_description)
+    
+    return jsonify(fitment_result)
+
+@app.route('/search', methods=['POST'])
+def search_candidates():
+    job_request = request.json
+    summary, top_candidates = process_job_request(job_request)
+    return jsonify({'top_candidates': top_candidates})
+
+if __name__ == '__main__':
+    app.run(port=5000, host='0.0.0.0', debug=True)
