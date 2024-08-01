@@ -125,4 +125,4 @@ def process_job_request(job_request):
     return summary, top_candidates
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=3000)
