@@ -50,9 +50,9 @@ def search_candidates():
 def health_check():
     version = "1.0"  # Replace with your actual version
     hostname = os.getenv('HOSTNAME', 'localhost')
-    port = os.getenv('PORT', '5000')
+    port = os.getenv('PORT', '3000')
     print(f'[Version {version}]: New request => http://{hostname}:{port}/health')
     return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
-    app.run(port=5000, host='0.0.0.0', debug=True)
+    app.run(port=3000, host='0.0.0.0', debug=True)
