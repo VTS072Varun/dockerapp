@@ -1,7 +1,8 @@
 Flask
-python-dotenv
-PyMuPDF
-openai==0.28
-langchain
+openai
 python-docx
+PyMuPDF
+mammoth
+langchain
+python-dotenv
 gunicorn
