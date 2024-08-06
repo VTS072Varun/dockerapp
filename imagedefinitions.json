@@ -1,6 +1,6 @@
 [
     {
-        "name": "awscli-demo-private",
-        "imageUri": "146225787475.dkr.ecr.us-east-1.amazonaws.com/awscli-demo-private:latest"
+        "name": "python-server-demo-private",
+        "imageUri": "146225787475.dkr.ecr.us-east-1.amazonaws.com/python-server-demo-private:latest"
     }
 ]
