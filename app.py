@@ -45,6 +45,10 @@ def search_candidates():
     summary, top_candidates = process_job_request(job_request)
     return jsonify({'top_candidates': top_candidates})
 
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
 # Health check route
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -56,5 +60,9 @@ def health_check():
 
 if __name__ == '__main__':
     app.run(port=3000, host='0.0.0.0', debug=True)
+
+
+
+
 
 
