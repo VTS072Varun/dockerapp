@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+import os
 
 app = Flask(__name__)
 
@@ -15,6 +16,15 @@ def handle_post():
     
     # Return a JSON response
     return jsonify(response)
+
+# Health check route
+@app.route('/health', methods=['GET'])
+def health_check():
+    version = "1.0"  # Replace with your actual version
+    hostname = os.getenv('HOSTNAME', 'localhost')
+    port = os.getenv('PORT', '3000')
+    print(f'[Version {version}]: New request => http://{hostname}:{port}/health')
+    return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
     app.run(port=3000)
